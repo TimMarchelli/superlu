@@ -81,19 +81,5 @@ set(sources "")
     )
 #endif()
 
-add_library(blas ${sources})
-
-include(GNUInstallDirs)
-install(TARGETS blas
-  EXPORT blasTargets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-)
-
-install(EXPORT blasTargets
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/superlu"
-  )
-export(EXPORT blasTargets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/blasTargets.cmake"
-  )
+# only links to main library. other packages should not rely on CBLAS from here.
+add_library(blas STATIC ${sources})

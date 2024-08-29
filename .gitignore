@@ -13,3 +13,4 @@
 # Visual Studio
 /.vs
 /out/build
+/.vscode/

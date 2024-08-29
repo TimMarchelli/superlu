@@ -9,28 +9,28 @@ endif()
 add_custom_target(examples_complex)
 add_dependencies(examples_complex
                  citersol citersol1 clinsol clinsol1)
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_dependencies(examples_complex
                    clinsolx clinsolx1 clinsolx2 clinsolx3)
 endif()
 add_custom_target(examples_double)
 add_dependencies(examples_double
                  ditersol ditersol1 dlinsol dlinsol1)
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_dependencies(examples_double
                    dlinsolx dlinsolx1 dlinsolx2 dlinsolx3)
 endif()
 add_custom_target(examples_float)
 add_dependencies(examples_float
                  sitersol sitersol1 slinsol slinsol1)
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_dependencies(examples_float
                    slinsolx slinsolx1 slinsolx2 slinsolx3)
 endif()
 add_custom_target(examples_doublecomplex)
 add_dependencies(examples_doublecomplex
                  zitersol zitersol1 zlinsol zlinsol1)
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_dependencies(examples_doublecomplex
                    zlinsolx zlinsolx1 zlinsolx2 zlinsolx3)
 endif()
@@ -67,7 +67,7 @@ add_executable(clinsol1
                clinsol1.c)
 target_link_libraries(clinsol1 superlu)
 
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_executable(clinsolx
                 ${_DEPENDENCY_ALL}
                 clinsolx.c)
@@ -110,7 +110,7 @@ add_executable(dlinsol1
                dlinsol1.c)
 target_link_libraries(dlinsol1 superlu)
 
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_executable(dlinsolx
                 ${_DEPENDENCY_ALL}
                 dlinsolx.c)
@@ -153,7 +153,7 @@ add_executable(slinsol1
                slinsol1.c)
 target_link_libraries(slinsol1 superlu)
 
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_executable(slinsolx
                 ${_DEPENDENCY_ALL}
                 slinsolx.c)
@@ -196,7 +196,7 @@ add_executable(zlinsol1
                zlinsol1.c)
 target_link_libraries(zlinsol1 superlu)
 
-if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
+if(NOT MSVC OR (MSVC AND wingetopt_FOUND))
   add_executable(zlinsolx
                 ${_DEPENDENCY_ALL}
                 zlinsolx.c)
@@ -218,7 +218,7 @@ if(NOT MSVC OR (MSVC AND WinGetOpt_FOUND))
   target_link_libraries(zlinsolx3 superlu)
 endif()
 
-if(MSVC AND WinGetOpt_FOUND)
+if(MSVC AND wingetopt_FOUND)
   set(NEEDS_GETOPT
     clinsolx clinsolx1 clinsolx2 clinsolx3
     dlinsolx dlinsolx1 dlinsolx2 dlinsolx3
@@ -226,7 +226,31 @@ if(MSVC AND WinGetOpt_FOUND)
     zlinsolx zlinsolx1 zlinsolx2 zlinsolx3)
   
   foreach(proj ${NEEDS_GETOPT})
-    target_include_directories(${proj} PRIVATE ${WinGetOpt_INCLUDE_DIR})
-    target_link_libraries(${proj} ${WinGetOpt_LIBRARY})
+    target_link_libraries(${proj} wingetopt::wingetopt)
   endforeach(proj ${NEEDS_GETOPT})
+endif()
+
+# copy DLLS for windows
+if(WIN32)
+  # get a target, only need to do this once
+  get_property(_targets DIRECTORY "." PROPERTY BUILDSYSTEM_TARGETS)
+  
+  foreach(_target ${_targets})
+    # only add copy command to an executable target
+    get_target_property(_val ${_target} TYPE)
+
+    # do it once
+    if(_val MATCHES "EXECUTABLE")
+      add_custom_command(TARGET ${_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${_target}> $<TARGET_RUNTIME_DLLS:${_target}>
+        COMMAND_EXPAND_LISTS
+      )
+      break()
+    endif()
+    
+    unset(_val)
+  endforeach()
+
+  unset(_target)
+  unset(_targets)
 endif()

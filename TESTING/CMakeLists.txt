@@ -19,28 +19,30 @@ function(add_superlu_test target input)
         set(testName "${target}_${n}_${s}_${l}")
         add_test(
           NAME ${testName}_LA
-          COMMAND ${target} -t "LA" -n ${n} -s ${s} -l ${l})
+          COMMAND ${target} -t "LA" -n ${n} -s ${s} -l ${l}
+        )
+
       endforeach()
 
       # SP tests
       set(testName "${target}_${s}_${l}")
       add_test(
         NAME ${testName}_SP
-        COMMAND ${target} -t "SP" -s ${s} -l ${l} -f "${TEST_INPUT}")
+        COMMAND ${target} -t "SP" -s ${s} -l ${l} -f "${TEST_INPUT}"
+      )
     endforeach()
   endforeach()
 
   # Add getopt dependency to target in case of MSVC
   if(MSVC)
-    target_include_directories(${target} PRIVATE ${WinGetOpt_INCLUDE_DIR})
-    target_link_libraries(${target} ${WinGetOpt_LIBRARY})
+    target_link_libraries(${target} wingetopt::wingetopt)
   endif()
 
 endfunction(add_superlu_test)
 
 # prevent creating testing for Windows if WinGetOps is not found
-if(MSVC AND NOT WinGetOpt_FOUND)
-  message("Disabled tests s_test, d_test, c_test, and z_test because optinal dependency WinGetOpt is missing")
+if(MSVC AND NOT wingetopt_FOUND)
+  message("Disabled tests s_test, d_test, c_test, and z_test because optinal dependency wingetopt is missing")
   return()
 endif()
 
@@ -51,7 +53,6 @@ if(enable_single)
   target_link_libraries(s_test ${test_link_libs})
   add_superlu_test(s_test g20.rua)
 endif()
-
 
 if(enable_double)
   add_executable(d_test
@@ -76,4 +77,19 @@ if(enable_complex16)
                  sp_ienv.c sp_zconvert.c)
   target_link_libraries(z_test ${test_link_libs})
   add_superlu_test(z_test cg20.cua)
+endif()
+
+# copy DLLS for windows
+if(WIN32)
+  # get a target, only need to do this once
+  get_property(_targets DIRECTORY "." PROPERTY BUILDSYSTEM_TARGETS)
+  if(_targets)
+    list(GET _targets 0 _target)
+    add_custom_command(TARGET ${_target} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${_target}> $<TARGET_RUNTIME_DLLS:${_target}>
+      COMMAND_EXPAND_LISTS
+    )
+    unset(_target)
+  endif()
+  unset(_targets)
 endif()

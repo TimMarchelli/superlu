@@ -3,10 +3,7 @@
 #define SUPERLU_CONFIG_H
 
 /* Enable metis */
-#cmakedefine HAVE_METIS @HAVE_METIS@
-
-/* Enable colamd */
-#cmakedefine HAVE_COLAMD @HAVE_COLAMD@
+#cmakedefine HAVE_METIS
 
 /* enable 64bit index mode */
 #cmakedefine XSDK_INDEX_SIZE @XSDK_INDEX_SIZE@

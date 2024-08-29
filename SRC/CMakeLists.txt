@@ -8,6 +8,8 @@ set(headers
     ${CMAKE_CURRENT_BINARY_DIR}/superlu_config.h
 )
 
+set(source_property_change_list)
+
 set(sources
   superlu_timer.c
   util.c
@@ -28,7 +30,7 @@ set(sources
   input_error.c
 )
 
-set_source_files_properties(superlu_timer.c PROPERTIES COMPILE_FLAGS -O0)
+list(APPEND source_property_change_list superlu_timer.c)
 
 if(enable_single)
   list(APPEND headers
@@ -77,7 +79,7 @@ if(enable_single)
     ilu_spivotL.c
     sdiagonal.c
   )
-  set_source_files_properties(smach.c PROPERTIES COMPILE_FLAGS -O0)
+  list(APPEND source_property_change_list smach.c)
 endif()
 
 if(enable_double)
@@ -128,7 +130,7 @@ if(enable_double)
     ddiagonal.c
     dGetDiagU.c
   )
-  set_source_files_properties(dmach.c PROPERTIES COMPILE_FLAGS -O0)
+  list(APPEND source_property_change_list dmach.c)
 endif()
 
 if(enable_complex)
@@ -233,62 +235,86 @@ if(enable_complex16)
   )
 endif()
 
+# disable optimization on some files
+foreach(src ${source_property_change_list})
+  if(MSVC)
+    set_source_files_properties(${src} PROPERTIES COMPILE_FLAGS /Od)
+  else()
+    set_source_files_properties(${src} PROPERTIES COMPILE_FLAGS -O0)
+  endif()
+endforeach()
+
+# add library
 add_library(superlu ${sources})
-target_link_libraries(superlu PUBLIC ${BLAS_LIB} ${METIS_LIB})
+
+# add public propogation to external BLAS and compile definition
+if(BLAS_FOUND)
+  target_link_libraries(superlu PUBLIC ${BLAS_LIB})
+  target_compile_definitions(superlu PRIVATE USE_VENDOR_BLAS)
+
+# private link to local BLAS
+else()
+  target_link_libraries(superlu PRIVATE ${BLAS_LIB})
+endif()
+
+# add METIS
+if(METIS_FOUND)
+  target_include_directories(superlu PUBLIC ${METIS_INCLUDE})
+  target_link_libraries(superlu PUBLIC ${METIS_LIB})
+endif()
+
 if (NOT WIN32)
   target_link_libraries(superlu PUBLIC m)
-endif ()
+endif()
+
 target_include_directories(superlu PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<INSTALL_INTERFACE:include>
-  )
+)
+
 set_target_properties(superlu PROPERTIES
-  VERSION ${PROJECT_VERSION} SOVERSION ${VERSION_MAJOR}
-  )
+  VERSION ${PROJECT_VERSION} 
+  SOVERSION ${VERSION_MAJOR}
+)
 
-# Define GNU standard installation directories
-include(GNUInstallDirs)
+# create an alias
+add_library(superlu::superlu ALIAS superlu)
 
+# install suplerlu
 install(TARGETS superlu
   EXPORT superluTargets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  RUNTIME DESTINATION ${INSTALL_RUNTIME_DIR}
+  LIBRARY DESTINATION ${INSTALL_LIBRARY_DIR}
+  ARCHIVE DESTINATION ${INSTALL_LIBRARY_DIR}
+  INCLUDES DESTINATION ${INSTALL_INCLUDE_DIR}
 )
 
 install(FILES ${headers}
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  DESTINATION ${INSTALL_INCLUDE_DIR}
 )
 
+# generate config files
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
   superluConfigVersion.cmake
   VERSION ${PACKAGE_VERSION}
   COMPATIBILITY SameMajorVersion
-  )
-#  VERSION ${PROJECT_VERSION}
-
-install(EXPORT superluTargets
-  FILE superluTargets.cmake
-  NAMESPACE superlu::
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/superlu"
-  )
-
+)
 configure_package_config_file(
   superluConfig.cmake.in superluConfig.cmake
   INSTALL_DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/superluConfig.cmake"
-  )
+)
+
+# install configuration files
+install(EXPORT superluTargets
+  FILE superluTargets.cmake
+  NAMESPACE superlu::
+  DESTINATION ${INSTALL_CONFIG_DIR}
+)
+
 install(
   FILES
       "${CMAKE_CURRENT_BINARY_DIR}/superluConfig.cmake"
       "${CMAKE_CURRENT_BINARY_DIR}/superluConfigVersion.cmake"
-  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/superlu"
-  )
-
-export(EXPORT superluTargets
-  FILE "${CMAKE_CURRENT_BINARY_DIR}/superluTargets.cmake"
-  NAMESPACE superlu::
-  )
-
-export(PACKAGE superlu)
+  DESTINATION ${INSTALL_CONFIG_DIR}
+)
